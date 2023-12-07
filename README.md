@@ -26,6 +26,11 @@ If we consider the user goals, their main goal is to find relevant information a
 
 ###Approach
 Note that in webdev, it is important to break things down the smaller steps to work on. So now just work based on one company first.
-1. User serper to find relevant links about the company
-2. From the links, get the text from the html content
-3. Pass in to the LLM (OpenAI) to summarise it
+- User serper to find relevant links about the company
+- From the links, get the text from the html content using browserless. It is able to get javascript loaded content so I don't need to do the selenium stuff. Not bad.
+- Pass in to the LLM (OpenAI) to summarise it
+
+##7 Dec - Got my first scraping result
+Did the approach of breaking up the html content into manageable bits so that the LLM can summarise the chunks and then combined the summarised chunks into a bigger text for it to summarise. The code worked but the results are not great. Need to figure out a better way. I've learnt that the REPR method for the OpenAI API returns a class instance. To get access to the content, need to do a variable.content to access it.
+
+Oh yes! Got the summarise scraping to work. The key is to extract mainly the P,H1 and H2 and css selectors which is where the main content lie. The others are not important information like headers footers etc.

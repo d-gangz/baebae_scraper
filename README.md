@@ -34,3 +34,9 @@ Note that in webdev, it is important to break things down the smaller steps to w
 Did the approach of breaking up the html content into manageable bits so that the LLM can summarise the chunks and then combined the summarised chunks into a bigger text for it to summarise. The code worked but the results are not great. Need to figure out a better way. I've learnt that the REPR method for the OpenAI API returns a class instance. To get access to the content, need to do a variable.content to access it.
 
 Oh yes! Got the summarise scraping to work. The key is to extract mainly the P,H1 and H2 and css selectors which is where the main content lie. The others are not important information like headers footers etc.
+
+##9 Dec - using companies provided to find information
+Now we are one step closer. Now is to try using real companies to find information and scrape
+
+##10 Dec - successfully summarise 5 links from one company
+Managed to get 3 companies, obtain top 5 search results of each and then scrape the article links and summarise them. The output was title, summary and links. Not bad as it worked.

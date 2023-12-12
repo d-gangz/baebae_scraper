@@ -4,6 +4,9 @@ import requests
 import json
 from bs4 import BeautifulSoup
 from openai import OpenAI
+import smtplib, ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 load_dotenv()  # This loads the .env file
 
@@ -14,6 +17,9 @@ client = OpenAI()
 serper_api_key = os.getenv('SERPER_API_KEY')
 browserless_api_key = os.getenv("BROWSERLESS_API_KEY")
 openai_api_key = os.getenv("OPENAI_API_KEY")
+
+# Access my email password for the email service
+email_password = os.getenv('EMAIL_PASSWORD')
 
 ## 1. Tool for search using Serper and returns top 3 results
 
@@ -66,7 +72,7 @@ for item in bullish_crypto:
 ## 2. Tool for scraping using browserless
 
 def scrape_site(url):
-    print("scraping website")
+    # print("scraping website")
     headers = {
         'Cache-Control': 'no-cache',
         'Content-Type': 'application/json'
@@ -128,10 +134,10 @@ def chunk_string(text_result,chunk_size):
     return chunk
 
 # Argument is a list of chunks. Parse through the chunks, summarise them and then combine the summary to summarise them all
-def webpage_summary(texts):
+def single_summary(chunk_list):
     total_summary = ""
 
-    for text in texts:
+    for text in chunk_list:
         summary_chunk = summarise(text) # Loop through text chunks and summarise them
         # Extract the content attribute from the ChatCompletionMessage object
         summary_text = summary_chunk.content
@@ -141,7 +147,7 @@ def webpage_summary(texts):
 
     return main_summary
 
-# Get summary of the results for a single search query. Argument is the search query
+# Get summary of the results for a single search query. Argument is the search query and output is html content
 def results_summary(query):
     results = search(query) # Get top 5 results
 
@@ -149,6 +155,7 @@ def results_summary(query):
     titles = []
     links = []
     dates = []
+    html_content = ""
 
     # Extract the values to put into above lists
     for item in results:
@@ -181,27 +188,87 @@ def results_summary(query):
         chunk_list = chunk_string(combined_content,3000)
 
         #Get the main summary
-        output_summary = webpage_summary(chunk_list)
+        output_summary = single_summary(chunk_list)
 
         # Extract the content attribute from the ChatCompletionMessage object
         article_summary = output_summary.content
         
+        """
         print(titles[i])
-        i+=1 #increment by 1 with each loop to print out the titles
-
+        print(dates[i])
         print(article_summary)
         print(link)
         print("\n")
+        """
 
+        html_content += f'<a href="{link}"><h2>{titles[i]}</h2></a>\n<p>{dates[i]}</p>\n<p>{article_summary}</p>\n'
+        
+        i+=1 #increment by 1 with each loop to print out the titles and dates
+
+    return html_content
+
+# Format the company name and the scrapped content properly in html format in order to output in the email
+def html_content(companies):
+    html_content = ""
+    for company,query in companies.items():
+        html_content += f'<h1>{company}</h1>\n'
+        html_content += results_summary(query)
+    
+    html = f'''\
+    <html>
+        <body>
+            {html_content}
+        <body>
+    <html>
+    '''
+    return html
+
+
+companies = {"Bullish":"bullish crypto company news -site:bullish.com",
+             "Fore Elite":"Fore Elite company news -site:foreelite.com"} 
+
+# print(html_content(companies))
+
+def send_email():
+    sender_email = "gangrdev@gmail.com"
+    receiver_email = "limgangrui@gmail.com"
+    password = email_password
+
+    message = MIMEMultipart("alternative")
+    message["Subject"] = "Latest news about your company"
+    message["From"] = sender_email
+    message["To"] = receiver_email
+
+    html = html_content(companies)
+
+    # Turn these into plain/html MIMEText objects
+    part = MIMEText(html, "html")
+
+    # Add HTML/plain-text parts to MIMEMultipart message
+    message.attach(part)
+
+    # Create secure connection with server and send email
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.login(sender_email, password)
+        server.sendmail(
+            sender_email, receiver_email, message.as_string()
+        )
+    return
+
+send_email()
+
+'''
 companies = {"Bullish":"bullish crypto company news -site:bullish.com", 
              "Fore Elite":"Fore Elite company news -site:foreelite.com", 
-             "Hashkey Exchange":"Hashkey Exchange crypto company news -site:hashkey.com"} 
-
+             "Hashkey Exchange":"Hashkey Exchange crypto company news -site:hashkey.com"}
+             
 ## Execute the functions to print out the summary of articles of the companies.
 for key,value in companies.items():
     print(key)
     print("\n")
     results_summary(value)
+'''
 
 '''
 ## Function calls to get the output of a single summary

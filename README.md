@@ -39,4 +39,13 @@ Oh yes! Got the summarise scraping to work. The key is to extract mainly the P,H
 Now we are one step closer. Now is to try using real companies to find information and scrape
 
 ##10 Dec - successfully summarise 5 links from one company
-Managed to get 3 companies, obtain top 5 search results of each and then scrape the article links and summarise them. The output was title, summary and links. Not bad as it worked.
+Managed to get 3 companies, obtain top 5 search results of each and then scrape the article links and summarise them. The output was title, summary and links. Not bad as it worked. Each function served a purpose then I finally used a dictionary to loop through the company names and search query in order to obtain the results. My last time is to do the scheduled email sending using smtp. Pretty excited to complete this project
+
+## 12 Dec - sending out as an email
+Managed to convert the content to html versions. Utilised the smtplib to send out as an email but was faced with the OpenAI rate limit. Gona try again tomorrow or see how I can figure out a way to increase my OpenAI tier
+
+## 13 Dec - test if email works
+Email sending to be verfied working. Managed to get the email with the right HTML format too. I would consider this as a small win! Now need to troubleshoot the OpenAI side and stuff.
+
+## 17 Dec - added logic to only get published websites today
+Added extra logic to only get articles that are published today. As this email is sent out daily, the scrapper will run daily and this is to prevent from sending too many articles to OpenAI to process. Mainly edited the search(query) function and results_summary(query) function to add the additional if logic to only filter out articles published today. Did the cron job. What is left is to add the companies and then run it daily to try it out.

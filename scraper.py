@@ -7,6 +7,7 @@ from openai import OpenAI
 import smtplib, ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from datetime import datetime
 
 load_dotenv()  # This loads the .env file
 
@@ -50,8 +51,23 @@ def search(query):
     # The values in the "organic" key is a list of dictionaries. So this can obtain the top 5
     top_5_results = organic_results[:5]
 
-    return top_5_results
+    # Get today's date in the format 'Nov 20, 2023'
+    today_date = datetime.now().strftime('%b %d, %Y')
 
+    today_articles = []
+
+    for result in top_5_results:
+        # for those with today's date, sometimes they list it as x hours ago. So this will capture them
+        if 'date' in result and (result['date'] == today_date or 'ago' in result['date']):
+            today_articles.append(result)
+    
+    if len(today_articles) == 0:
+        return "No relevant articles today"
+
+    return today_articles
+    #return top_5_results
+
+#print(search("nissan company news -site:nissan.com"))
 '''
 ## Testing out to get the links etc
 
@@ -157,63 +173,61 @@ def results_summary(query):
     dates = []
     html_content = ""
 
-    # Extract the values to put into above lists
-    for item in results:
-        title = item["title"]
-        titles.append(title)
-        link = item["link"]
-        links.append(link)
-        date = item.get("date", "No date available")
-        dates.append(date)
+    if results != "No relevant articles today":
+        # Extract the values to put into above lists
+        for item in results:
+            title = item["title"]
+            titles.append(title)
+            link = item["link"]
+            links.append(link)
+            date = item.get("date", "No date available")
+            dates.append(date)
 
-    i = 0 # Iterator used to print out title for each one
+        i = 0 # Iterator used to print out title for each one
 
-    for link in links:
-        # This returns you a JSON string of the website content in the html format
-        site_content = scrape_site(link)
-        if site_content is None:
-            continue # Skip this link if scraping failed
-        # To convert JSON string into a dictionary
-        parsed_content = json.loads(site_content)
-        
-        # Initialize an empty string to store the combined content
-        combined_content = ''
+        for link in links:
+            # This returns you a JSON string of the website content in the html format
+            site_content = scrape_site(link)
+            if site_content is None:
+                continue # Skip this link if scraping failed
+            # To convert JSON string into a dictionary
+            parsed_content = json.loads(site_content)
+            
+            # Initialize an empty string to store the combined content
+            combined_content = ''
 
-        # Loop through each item in 'data' (there were 3 'data values') and append the 'text' content from 'results'
-        for item in parsed_content['data']:
-            for result in item['results']:
-                combined_content += result['text'] + ' '  # Add a space for readability
+            # Loop through each item in 'data' (there were 3 'data values') and append the 'text' content from 'results'
+            for item in parsed_content['data']:
+                for result in item['results']:
+                    combined_content += result['text'] + ' '  # Add a space for readability
 
-        # Breaking up the text result into chunks
-        chunk_list = chunk_string(combined_content,3000)
+            # Breaking up the text result into chunks
+            chunk_list = chunk_string(combined_content,3000)
 
-        #Get the main summary
-        output_summary = single_summary(chunk_list)
+            #Get the main summary
+            output_summary = single_summary(chunk_list)
 
-        # Extract the content attribute from the ChatCompletionMessage object
-        article_summary = output_summary.content
-        
-        """
-        print(titles[i])
-        print(dates[i])
-        print(article_summary)
-        print(link)
-        print("\n")
-        """
+            # Extract the content attribute from the ChatCompletionMessage object
+            article_summary = output_summary.content
 
-        html_content += f'<a href="{link}"><h2>{titles[i]}</h2></a>\n<p>{dates[i]}</p>\n<p>{article_summary}</p>\n'
-        
-        i+=1 #increment by 1 with each loop to print out the titles and dates
+            html_content += f'<a href="{link}"><h2>{titles[i]}</h2></a>\n<p>{dates[i]}</p>\n<p>{article_summary}</p>\n'
+            
+            i+=1 #increment by 1 with each loop to print out the titles and dates
+    else:
+        html_content = '<p>No relevant articles today</p>\n'
 
     return html_content
 
+#print(results_summary("bullish crypto company news -site:bullish.com"))
+
 # Format the company name and the scrapped content properly in html format in order to output in the email
 def html_content(companies):
+    
     html_content = ""
     for company,query in companies.items():
         html_content += f'<h1>{company}</h1>\n'
         html_content += results_summary(query)
-    
+
     html = f'''\
     <html>
         <body>
@@ -225,7 +239,8 @@ def html_content(companies):
 
 
 companies = {"Bullish":"bullish crypto company news -site:bullish.com",
-             "Fore Elite":"Fore Elite company news -site:foreelite.com"} 
+             "Fore Elite":"Fore Elite company news -site:foreelite.com", 
+             "Hashkey Exchange":"Hashkey Exchange crypto company news -site:hashkey.com"}
 
 # print(html_content(companies))
 
@@ -235,7 +250,7 @@ def send_email():
     password = email_password
 
     message = MIMEMultipart("alternative")
-    message["Subject"] = "Latest news about your company"
+    message["Subject"] = "Latest news about your top client companies"
     message["From"] = sender_email
     message["To"] = receiver_email
 
@@ -255,6 +270,7 @@ def send_email():
             sender_email, receiver_email, message.as_string()
         )
     return
+
 
 send_email()
 
